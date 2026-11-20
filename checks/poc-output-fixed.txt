@@ -1,0 +1,8 @@
+F1   Shortcode attribute XSS (contributor)          blocked
+F2a  REST create note, no login (permission_callback) blocked
+F2b  Stored XSS via author field                    blocked
+F3   SQL injection in search (no login)             blocked
+F5   Path traversal reads wp-config.php (no login)  blocked
+F6   Subscriber uploads and runs a PHP file         blocked
+F7   Reflected XSS on admin page                    blocked
+F4   Subscriber deletes any post (no nonce/cap)     blocked

@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sample security review: Demo Notes Board | Bryan Byfield</title>
+<meta name="description" content="A sample WordPress plugin security review of a demo plugin with deliberately planted bugs.">
+<link rel="stylesheet" href="../style.css"></head><body>
+<header class="top"><div class="wrap"><a class="brand" href="../">Bryan Byfield</a><nav><a href="../#pricing">Pricing</a><a href="../#contact">Contact</a></nav></div></header>
+<main class="wrap"><div class="note" style="margin-top:28px"><a href="../">&larr; Back to the offer</a> &middot; <a href="https://github.com/bryanbyfield0-creator/wp-security-review/tree/main/demo-plugin">Demo plugin and fixed version</a></div>
+<h1>Sample Security Review: Demo Notes Board</h1>
+<p><strong>This is a sample report.</strong> The plugin below is a demo I wrote myself for this purpose. It contains deliberately planted vulnerabilities so you can see exactly what a review from me looks like. It is not a real plugin, and no real plugin or real person's code is reviewed here. Do not install it on a live site.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Plugin reviewed</td>
+<td>Demo Notes Board (sample), version 1.0.0, one PHP file, 123 lines</td>
+</tr>
+<tr>
+<td>Reviewed by</td>
+<td>Bryan Byfield</td>
+</tr>
+<tr>
+<td>Test environment</td>
+<td>Fresh local WordPress 7.1.5 install, PHP 8.3, reachable only from my own machine</td>
+</tr>
+<tr>
+<td>Test accounts</td>
+<td>Administrator, Contributor, Subscriber, and a logged-out visitor</td>
+</tr>
+<tr>
+<td>Review type</td>
+<td>Full review (plugin under 10,000 lines)</td>
+</tr>
+</tbody>
+</table>
+<h2>1. Summary</h2>
+<p>I read every line of the plugin and then tried each suspected problem on a real WordPress install, once per role, before writing it down. Every finding below was reproduced. Nothing is listed on a hunch.</p>
+<p><strong>Result: 8 findings.</strong> 6 High, 1 Medium and 1 Low. Four of the High findings can be used by a visitor who is not logged in.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Finding</th>
+<th>Who can trigger it</th>
+<th>Rating</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Shortcode attribute printed without escaping (stored XSS)</td>
+<td>Contributor</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>2a</td>
+<td>REST route open to everyone (<code>permission_callback</code> is <code>__return_true</code>)</td>
+<td>Anyone, no login</td>
+<td>High</td>
+</tr>
+<tr>
+<td>2b</td>
+<td>Stored XSS through the author field, created via 2a</td>
+<td>Anyone, no login</td>
+<td>High</td>
+</tr>
+<tr>
+<td>3</td>
+<td>SQL injection in the search endpoint</td>
+<td>Anyone, no login</td>
+<td>High</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Delete endpoint has no nonce, no capability check, and accepts any post ID</td>
+<td>Any logged-in user</td>
+<td>High</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Path traversal in the export download reads files outside the plugin</td>
+<td>Anyone, no login</td>
+<td>High</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Upload handler accepts any file type from any logged-in user</td>
+<td>Subscriber and up</td>
+<td>High</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Reflected XSS on the admin page</td>
+<td>Needs an admin to click a link</td>
+<td>Low</td>
+</tr>
+</tbody>
+</table>
+<p>Ratings reflect how easy the issue is to reach and how much it exposes on a typical site. They are my judgment, not a formal score.</p>
+<h2>2. What I checked</h2>
+<ul>
+<li><strong>Capabilities and nonces</strong> on every AJAX action, <code>admin-post</code> action and form handler</li>
+<li><strong>SQL</strong>: every query, whether it goes through <code>$wpdb-&gt;prepare()</code>, and how LIKE values are escaped</li>
+<li><strong>Output escaping</strong>: every place user or stored data is printed, including shortcode attributes and post meta</li>
+<li><strong>Input handling</strong>: sanitizing, and whether <code>wp_unslash()</code> is used in a way that undoes WordPress's built-in slashing</li>
+<li><strong>REST routes</strong>: every <code>register_rest_route()</code> and its <code>permission_callback</code></li>
+<li><strong>File handling</strong>: reads, writes and uploads, including path traversal and file type checks</li>
+<li><strong>Admin pages</strong>: capability on the menu item, and any reflected values</li>
+</ul>
+<h2>3. Findings</h2>
+<h3>Finding 1: Shortcode attribute printed without escaping (Medium)</h3>
+<p><strong>Where:</strong> <code>demo-notes-board.php</code>, line 36, <code>dnb_board_shortcode()</code></p>
+<pre><code class="language-php">$out = '&lt;div class=&quot;dnb-board&quot; data-title=&quot;' . $atts['title'] . '&quot;&gt;&lt;ul&gt;';
+</code></pre>
+<p><strong>Problem:</strong> The <code>title</code> attribute of <code>[dnb_board]</code> goes straight into an HTML attribute. A Contributor can write a post that breaks out of the attribute and adds their own event handler. When an editor publishes the post, the script runs for every visitor, including admins.</p>
+<p><strong>How I reproduced it:</strong> As a Contributor, I saved a post containing a shortcode whose title value ends the attribute early and adds <code>onmouseover="alert(1)"</code>. I published it as an editor would, loaded the page, and the handler was in the page source unescaped.</p>
+<p><strong>Fix:</strong> Escape on output.</p>
+<pre><code class="language-php">$out = '&lt;div class=&quot;dnb-board&quot; data-title=&quot;' . esc_attr( $atts['title'] ) . '&quot;&gt;&lt;ul&gt;';
+</code></pre>
+<h3>Finding 2a: REST route open to everyone (High)</h3>
+<p><strong>Where:</strong> line 52, <code>dnb_register_routes()</code></p>
+<pre><code class="language-php">'permission_callback' =&gt; '__return_true',
+</code></pre>
+<p><strong>Problem:</strong> <code>POST /wp-json/dnb/v1/notes</code> creates a published note for any visitor, logged in or not. This is the doorway for Finding 2b and also lets anyone fill the site with junk.</p>
+<p><strong>How I reproduced it:</strong> A logged-out request with a title and author returned a new note ID, and the note appeared on the site.</p>
+<p><strong>Fix:</strong> Require a real capability.</p>
+<pre><code class="language-php">'permission_callback' =&gt; function () {
+    return current_user_can( 'publish_posts' );
+},
+</code></pre>
+<h3>Finding 2b: Stored XSS through the author field (High)</h3>
+<p><strong>Where:</strong> line 40 (output), line 61 (input) in <code>dnb_rest_create_note()</code></p>
+<p><strong>Problem:</strong> The REST handler saves the <code>author</code> value as-is into post meta, and the shortcode prints it without escaping. Combined with 2a, a visitor with no account can plant a script that runs on any page showing the board.</p>
+<p><strong>How I reproduced it:</strong> A logged-out request set the author to a script tag, and I loaded a page with <code>[dnb_board]</code> on it. The script tag was in the page source exactly as sent.</p>
+<p><strong>Fix:</strong> Sanitize on the way in and escape on the way out.</p>
+<pre><code class="language-php">update_post_meta( $id, 'dnb_author', sanitize_text_field( $request-&gt;get_param( 'author' ) ) );
+// and on output:
+$out .= '&lt;li&gt;&lt;strong&gt;' . esc_html( $author ) . '&lt;/strong&gt;: ' . esc_html( $note-&gt;post_title ) . '&lt;/li&gt;';
+</code></pre>
+<h3>Finding 3: SQL injection in the search endpoint (High)</h3>
+<p><strong>Where:</strong> lines 70 to 74, <code>dnb_ajax_search()</code>, reachable at <code>admin-ajax.php?action=dnb_search</code> with no login</p>
+<pre><code class="language-php">$q    = isset( $_GET['q'] ) ? wp_unslash( $_GET['q'] ) : '';
+$rows = $wpdb-&gt;get_results( &quot;... AND post_title LIKE '%$q%'&quot; );
+</code></pre>
+<p><strong>Problem:</strong> The search term is placed directly into the query. <code>wp_unslash()</code> removes the slashes WordPress adds to request data, so the quote characters reach the database intact. A visitor can change the query and read rows they should not see.</p>
+<p><strong>How I reproduced it:</strong> I created a private note with an obvious title. A logged-out request with a crafted search term returned that private note, which the endpoint is never supposed to show.</p>
+<p><strong>Fix:</strong> Use <code>$wpdb-&gt;prepare()</code> and escape the LIKE wildcard characters.</p>
+<pre><code class="language-php">$like = '%' . $wpdb-&gt;esc_like( $q ) . '%';
+$rows = $wpdb-&gt;get_results( $wpdb-&gt;prepare(
+    &quot;SELECT ID, post_title FROM {$wpdb-&gt;posts} WHERE post_type = 'dnb_note' AND post_status = 'publish' AND post_title LIKE %s&quot;,
+    $like
+) );
+</code></pre>
+<h3>Finding 4: Delete endpoint has no checks (High)</h3>
+<p><strong>Where:</strong> lines 81 and 82, <code>dnb_ajax_delete_note()</code></p>
+<pre><code class="language-php">$id = isset( $_POST['id'] ) ? (int) $_POST['id'] : 0;
+wp_delete_post( $id, true );
+</code></pre>
+<p><strong>Problem:</strong> Three things are missing. There is no nonce, so another site can trigger the delete for a logged-in user (CSRF). There is no capability check, so any logged-in user, even a Subscriber, can call it. And the ID is never checked to be one of this plugin's notes, so it deletes any post or page, permanently.</p>
+<p><strong>How I reproduced it:</strong> As a Subscriber, I sent one request with the ID of the site's default post. The post was gone afterward.</p>
+<p><strong>Fix:</strong> Nonce, capability, and a post type check.</p>
+<pre><code class="language-php">check_ajax_referer( 'dnb_delete_note', 'nonce' );
+$id = absint( $_POST['id'] ?? 0 );
+if ( ! $id || 'dnb_note' !== get_post_type( $id ) || ! current_user_can( 'delete_post', $id ) ) {
+    wp_send_json_error( null, 403 );
+}
+wp_delete_post( $id, true );
+</code></pre>
+<h3>Finding 5: Path traversal in the export download (High)</h3>
+<p><strong>Where:</strong> line 93, <code>dnb_maybe_download_export()</code></p>
+<pre><code class="language-php">$file = DNB_DIR . 'exports/' . $_GET['dnb_export'];
+</code></pre>
+<p><strong>Problem:</strong> The file name from the URL is appended to the path without cleaning, so <code>../</code> sequences walk out of the exports folder. No login is needed. On a real site this can expose <code>wp-config.php</code>, which holds the database credentials and secret keys.</p>
+<p><strong>How I reproduced it:</strong> A logged-out request with <code>../</code> segments returned the contents of the test site's <code>wp-config.php</code>. (Those are throwaway credentials on my local test install.)</p>
+<p><strong>Fix:</strong> Require a capability, reduce the name to a plain file name, and confirm the resolved path stays inside the exports folder.</p>
+<pre><code class="language-php">if ( ! current_user_can( 'manage_options' ) ) { wp_die( 'Not allowed.', '', array( 'response' =&gt; 403 ) ); }
+$base = realpath( DNB_DIR . 'exports' );
+$file = realpath( $base . '/' . basename( wp_unslash( $_GET['dnb_export'] ) ) );
+if ( $file &amp;&amp; 0 === strpos( $file, $base . DIRECTORY_SEPARATOR ) &amp;&amp; is_file( $file ) ) { /* serve it */ }
+</code></pre>
+<h3>Finding 6: Upload handler accepts any file (High)</h3>
+<p><strong>Where:</strong> lines 107 and 108, <code>dnb_handle_upload()</code>, hooked to <code>admin_post_dnb_upload</code></p>
+<pre><code class="language-php">$name = $_FILES['attachment']['name'];
+move_uploaded_file( $_FILES['attachment']['tmp_name'], $dir . '/' . $name );
+</code></pre>
+<p><strong>Problem:</strong> Any logged-in user can upload any file type under its original name, with no nonce and no capability check. A Subscriber account (which anyone can get on a site with open registration) can upload a <code>.php</code> file into the uploads folder and run it, which means full control of the site.</p>
+<p><strong>How I reproduced it:</strong> As a Subscriber, I uploaded a one-line PHP file that only prints the word "probe-ok". Requesting it in the browser ran it and printed that word. I used a harmless probe on purpose.</p>
+<p><strong>Fix:</strong> Nonce, capability, and WordPress's own upload handler with an allowed-types list.</p>
+<pre><code class="language-php">check_admin_referer( 'dnb_upload' );
+if ( ! current_user_can( 'upload_files' ) ) { wp_die( 'Not allowed.', '', array( 'response' =&gt; 403 ) ); }
+require_once ABSPATH . 'wp-admin/includes/file.php';
+$result = wp_handle_upload( $_FILES['attachment'], array(
+    'test_form' =&gt; false,
+    'mimes'     =&gt; array( 'jpg|jpeg' =&gt; 'image/jpeg', 'png' =&gt; 'image/png', 'pdf' =&gt; 'application/pdf' ),
+) );
+</code></pre>
+<h3>Finding 7: Reflected XSS on the admin page (Low)</h3>
+<p><strong>Where:</strong> line 120, <code>dnb_admin_page()</code></p>
+<pre><code class="language-php">echo '&lt;div class=&quot;notice notice-info&quot;&gt;&lt;p&gt;' . $_GET['msg'] . '&lt;/p&gt;&lt;/div&gt;';
+</code></pre>
+<p><strong>Problem:</strong> The <code>msg</code> value is printed unescaped. An attacker needs to get a logged-in admin to click a crafted link, which is why I rate it Low, but a script running in an admin session can do real damage.</p>
+<p><strong>How I reproduced it:</strong> As an Administrator, I opened the admin page with a script tag in <code>msg</code>. It appeared unescaped in the page source.</p>
+<p><strong>Fix:</strong> <code>echo esc_html( sanitize_text_field( wp_unslash( $_GET['msg'] ) ) );</code></p>
+<h2>4. Retest after fixes</h2>
+<p>I applied every fix above to a second copy of the plugin (version 1.0.1) and ran the same checks again on a fresh install with the same four roles. All eight checks were blocked.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Version 1.0.0</th>
+<th>Version 1.0.1</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Exploitable</td>
+<td>Blocked</td>
+</tr>
+<tr>
+<td>2a</td>
+<td>Exploitable</td>
+<td>Blocked</td>
+</tr>
+<tr>
+<td>2b</td>
+<td>Exploitable</td>
+<td>Blocked</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Exploitable</td>
+<td>Blocked</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Exploitable</td>
+<td>Blocked</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Exploitable</td>
+<td>Blocked</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Exploitable</td>
+<td>Blocked</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Exploitable</td>
+<td>Blocked</td>
+</tr>
+</tbody>
+</table>
+<p>The fixed version and the exact check script are in the repository next to this report, so you can run them yourself.</p>
+<h2>5. Limits of this review</h2>
+<ul>
+<li>This is a point-in-time review of one version of the code. It is not a guarantee that a plugin has no vulnerabilities and it is not a certification.</li>
+<li>I tested on a local install with the roles listed above. I do not test anyone's live website.</li>
+<li>Third-party libraries, JavaScript build steps and anything outside the files you send me are out of scope unless we agree otherwise.</li>
+<li>Fixing the issues is up to you. I'm happy to recheck your fixes once, as part of the review price, if you send me the updated version within 30 days.</li>
+</ul>
+<h2>6. How a review works</h2>
+<ol>
+<li>You email me the plugin (a zip or a private repo link).</li>
+<li>I confirm what is in scope and the price for your plugin's size.</li>
+<li>I review it and send you a report like this one.</li>
+<li>I send a PayPal invoice after you have the report. There is nothing to pay up front.</li>
+</ol>
+<p>Contact: bryanbyfield0@gmail.com</p>
+</main><footer><div class="wrap">&copy; 2026 Bryan Byfield &middot; <a href="mailto:bryanbyfield0@gmail.com">bryanbyfield0@gmail.com</a></div></footer></body></html>

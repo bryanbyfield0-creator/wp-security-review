@@ -1,0 +1,8 @@
+F1   Shortcode attribute XSS (contributor)          EXPLOITABLE
+F2a  REST create note, no login (permission_callback) EXPLOITABLE
+F2b  Stored XSS via author field                    EXPLOITABLE
+F3   SQL injection in search (no login)             EXPLOITABLE
+F5   Path traversal reads wp-config.php (no login)  EXPLOITABLE
+F6   Subscriber uploads and runs a PHP file         EXPLOITABLE
+F7   Reflected XSS on admin page                    EXPLOITABLE
+F4   Subscriber deletes any post (no nonce/cap)     EXPLOITABLE

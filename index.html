@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WordPress Plugin Security Review | Bryan Byfield</title>
+<meta name="description" content="A fixed-price security review of your WordPress plugin or theme, written up as a clear findings report. Pay by PayPal invoice after you have the report.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top"><div class="wrap">
+  <a class="brand" href="./">Bryan Byfield</a>
+  <nav><a href="#what">What I check</a><a href="#pricing">Pricing</a><a href="#how">How it works</a><a href="sample-report/">Sample report</a><a href="#contact">Contact</a></nav>
+</div></header>
+
+<main class="wrap">
+<section class="hero">
+  <h1>A security review for your WordPress plugin or theme</h1>
+  <p class="lead">I read your code line by line, test what I find on a real WordPress install, and send you a plain-English report with the file, the line and the fix for every issue. You pay by PayPal invoice after you have the report.</p>
+  <a class="btn" href="mailto:bryanbyfield0@gmail.com?subject=Plugin%20security%20review">Email me about a review</a>
+  <a class="btn alt" href="sample-report/">See a sample report</a>
+</section>
+
+<section id="about">
+  <h2>Who I am</h2>
+  <p>I'm Bryan Byfield, a web developer in San Bernardino, California. I've been building and maintaining websites since 2015, mostly on WordPress. I test everything on a real install before I tell anyone it works, and that includes security findings: if I write it in a report, I have reproduced it.</p>
+  <p>This service is for people who write plugins and themes. If you ship code to other people's sites, a second pair of eyes before a release or before a directory submission is cheap compared with a vulnerability report after the fact.</p>
+</section>
+
+<section id="what">
+  <h2>What I check</h2>
+  <ul class="check">
+    <li><strong>Capabilities and nonces.</strong> Every AJAX action, <code>admin-post</code> handler and form: who can call it, and can another site trigger it for a logged-in user.</li>
+    <li><strong>SQL injection.</strong> Every query, whether it goes through <code>$wpdb-&gt;prepare()</code>, and how LIKE values and <code>IN()</code> lists are built.</li>
+    <li><strong>Cross-site scripting.</strong> Stored, reflected and shortcode-attribute output: is data escaped on the way out, in the right context.</li>
+    <li><strong>REST API routes.</strong> Every <code>register_rest_route()</code> and its <code>permission_callback</code>, plus how request data is validated.</li>
+    <li><strong>File handling.</strong> Uploads, downloads, exports and any path built from user input: file type checks, path traversal, where files land.</li>
+    <li><strong>The basics around them.</strong> Input sanitizing, direct file access, options and settings pages, and anything that handles user roles.</li>
+  </ul>
+  <p>What you get back is a findings report: a summary table, then one entry per issue with the file and line, who can trigger it, how I reproduced it, a rating, and a suggested fix you can paste in. <a href="sample-report/">Here is a full sample.</a></p>
+</section>
+
+<section id="pricing">
+  <h2>Pricing</h2>
+  <p>Fixed price, set by the size of the plugin (lines of PHP, not counting bundled third-party libraries). I confirm the tier with you before I start.</p>
+  <div class="tiers">
+    <div class="tier">
+      <h3>Quick Scan</h3>
+      <div class="price">$99</div>
+      <ul><li>Up to about 1,000 lines of PHP</li><li>Small single-purpose plugins</li><li>Report in 3 business days</li></ul>
+    </div>
+    <div class="tier">
+      <h3>Standard Review</h3>
+      <div class="price">$175</div>
+      <ul><li>Up to about 5,000 lines of PHP</li><li>Most plugins with forms, AJAX or a REST API</li><li>Report in 5 business days</li></ul>
+    </div>
+    <div class="tier">
+      <h3>Full Review</h3>
+      <div class="price">$250</div>
+      <ul><li>Up to about 10,000 lines of PHP</li><li>Larger plugins and themes</li><li>Report in 7 business days</li></ul>
+    </div>
+  </div>
+  <p>Every tier includes the written report and one recheck of your fixes if you send me the updated version within 30 days. Bigger than 10,000 lines? Email me and I'll quote it.</p>
+  <div class="note"><strong>No upfront cost, no checkout.</strong> I send a PayPal invoice after you have the report. There is nothing to pay to get started.</div>
+</section>
+
+<section id="how">
+  <h2>How it works</h2>
+  <ol class="steps">
+    <li>Email me a zip of the plugin or theme, or a link to a private repository.</li>
+    <li>I reply with the line count, the tier and the delivery date. You say yes or no.</li>
+    <li>I review the code and test each finding on a local WordPress install, using the roles that matter: logged-out visitor, subscriber, contributor, administrator.</li>
+    <li>You get the report as a PDF and Markdown file.</li>
+    <li>After you have it, I send a PayPal invoice for the tier price.</li>
+  </ol>
+</section>
+
+<section id="faq">
+  <h2>Questions</h2>
+  <details><summary>Will you publish what you find?</summary><p>No. The report is private to you. I don't disclose anything publicly and I don't submit what I find about your code anywhere else.</p></details>
+  <details><summary>Do you test on my live site?</summary><p>Never. I test only on a local install I set up myself, with your code.</p></details>
+  <details><summary>What happens to my code?</summary><p>I keep it confidential and delete my copy 30 days after I send the report, or sooner if you ask.</p></details>
+  <details><summary>Does a clean report mean my plugin is secure?</summary><p>No. It's a point-in-time review of the version you send me, not a certification or a guarantee. The report states the scope, and I'll say plainly if something is outside it.</p></details>
+  <details><summary>Do you fix the problems too?</summary><p>The review includes a suggested fix for every finding. Applying them is up to you, and I'll recheck your changes once, as described above. If you'd like me to make the fixes, email me and I'll quote it separately.</p></details>
+  <details><summary>Can I see what a report looks like first?</summary><p>Yes: <a href="sample-report/">the sample report</a> is a review of a demo plugin I wrote myself, with deliberately planted bugs, so no real plugin or person is involved. The <a href="https://github.com/bryanbyfield0-creator/wp-security-review">demo plugin, the fixed version and the check script</a> are public.</p></details>
+</section>
+
+<section id="contact">
+  <h2>Contact</h2>
+  <p>Email is the best way to reach me: <a href="mailto:bryanbyfield0@gmail.com?subject=Plugin%20security%20review">bryanbyfield0@gmail.com</a>. Tell me the plugin name and roughly how big it is, and I'll come back with the tier and date.</p>
+</section>
+</main>
+
+<footer><div class="wrap">
+  &copy; 2026 Bryan Byfield &middot; San Bernardino, California &middot; <a href="mailto:bryanbyfield0@gmail.com">bryanbyfield0@gmail.com</a>
+</div></footer>
+</body>
+</html>
