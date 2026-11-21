@@ -1,6 +1,6 @@
 # WordPress plugin security review
 
-Fixed-price security reviews for WordPress plugin and theme authors, by Bryan Byfield.
+Fixed-price security reviews for WordPress plugin and theme authors, by Bryan Byfield. Also a WordPress.org readme rewrite: $79 on its own, or $49 added to any review.
 
 - Offer page: https://bryanbyfield0-creator.github.io/wp-security-review/
 - Sample report: https://bryanbyfield0-creator.github.io/wp-security-review/sample-report/
